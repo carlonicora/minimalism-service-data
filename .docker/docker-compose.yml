@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  minimalism-service-data:
+    container_name: minimalism-service-data
+    image: carlonicora/minimalism-service-data:1.0.0
+    build:
+      context: .
+      dockerfile: ./php-cli/Dockerfile
+      args:
+        - XDEBUG_HOST=${XDEBUG_HOST}
+        - XDEBUG_PORT=${XDEBUG_PORT}
+    working_dir: /app
+    volumes:
+      - ../:/app
+      - ../:/opt/project
+    tty: true
+    stdin_open: true
+    networks:
+      - default_network
+
+networks:
+  default_network:
+    driver: bridge
+    name: carlonicora
