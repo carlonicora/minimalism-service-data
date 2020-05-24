@@ -214,7 +214,7 @@ abstract class AbstractResourceFactory
             DataErrorEvent::DATA_NOT_FOUND()->throw();
         }
 
-        return $this->generateResourceObject($this->serviceResourceBuilder, $data, $addRelationship);
+        return $this->generateResourceObject($this->configurationResourceBuilderClassName, $data, $addRelationship);
     }
 
     /**
@@ -235,7 +235,7 @@ abstract class AbstractResourceFactory
         $response = [];
 
         foreach ($data as $record){
-            $response[] = $this->generateResourceObject($this->serviceResourceBuilder, $record, $addRelationship);
+            $response[] = $this->generateResourceObject($this->configurationResourceBuilderClassName, $record, $addRelationship);
         }
 
         return $response;
