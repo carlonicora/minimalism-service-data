@@ -1,7 +1,6 @@
 <?php
 namespace CarloNicora\Minimalism\Services\Data\Abstracts;
 
-use CarloNicora\Minimalism\Core\Services\Exceptions\ServiceNotFoundException;
 use CarloNicora\Minimalism\Core\Services\Factories\ServicesFactory;
 use CarloNicora\Minimalism\Services\Cacher\Cacher;
 use CarloNicora\Minimalism\Services\Cacher\Exceptions\CacheNotFoundException;
@@ -40,7 +39,7 @@ abstract class AbstractWrapper
     /**
      * abstractWrapper constructor.
      * @param ServicesFactory $services
-     * @throws ServiceNotFoundException
+     * @throws Exception
      */
     public function __construct(ServicesFactory $services)
     {
@@ -207,14 +206,14 @@ abstract class AbstractWrapper
     /**
      * @param string|null $cacheName
      * @param array|null $cacheParameters
+     * @param array|null $childCacheParameters
+     * @param string|null $recordId
      * @param callable $dataLoader
      * @param array $dataLoaderParameters
-     * @param array $childCacheParameters
-     * @param string $recordId
      * @return array|null
      * @throws ElementNotFoundException
      */
-    public function getGenericWithChildren(?string $cacheName, ?array $cacheParameters, callable $dataLoader, array $dataLoaderParameters, array $childCacheParameters , string $recordId) : ?array
+    public function getGenericWithChildren(?string $cacheName, ?array $cacheParameters, ?array $childCacheParameters , ?string $recordId, callable $dataLoader, array $dataLoaderParameters) : ?array
     {
         if ($this->cacher->useCaching()) {
             try {
