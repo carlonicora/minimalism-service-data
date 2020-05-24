@@ -22,14 +22,12 @@ class DataErrorEvent extends AbstractErrorEvent
         );
     }
 
-    public static function DATA_NOT_FOUND(Exception $e) : EventInterface
+    public static function DATA_NOT_FOUND() : EventInterface
     {
         return new self(
             2,
             ResponseInterface::HTTP_STATUS_500,
-            'Data not found',
-            [],
-            $e
+            'Data not found'
         );
     }
 }

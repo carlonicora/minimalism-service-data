@@ -2,7 +2,6 @@
 namespace CarloNicora\Minimalism\Services\Data\Abstracts;
 
 use CarloNicora\JsonApi\Objects\ResourceObject;
-use CarloNicora\Minimalism\Core\Services\Exceptions\ServiceNotFoundException;
 use CarloNicora\Minimalism\Core\Services\Factories\ServicesFactory;
 use CarloNicora\Minimalism\Interfaces\EncrypterInterface;
 use CarloNicora\Minimalism\Services\Cacher\Abstracts\AbstractCache;
@@ -24,6 +23,9 @@ abstract class AbstractJsonApiLoader
     /** @var ResourceBuilder  */
     protected ResourceBuilder $resourceBuilder;
 
+    /** @var EncrypterInterface|null  */
+    protected ?EncrypterInterface $encrypter=null;
+
     /** @var Cacher  */
     protected Cacher $cacher;
 
@@ -39,15 +41,16 @@ abstract class AbstractJsonApiLoader
     /**
      * campaignLoader constructor.
      * @param ServicesFactory $services
-     * @throws ServiceNotFoundException
+     * @param EncrypterInterface|null $encrypter
      */
-    public function __construct(servicesFactory $services)
+    public function __construct(servicesFactory $services, ?EncrypterInterface $encrypter=null)
     {
         /** @noinspection UnusedConstructorDependenciesInspection */
         $this->services = $services;
 
         $this->resourceBuilder = $services->service(ResourceBuilder::class);
         $this->cacher = $services->service(Cacher::class);
+        $this->encrypter = $encrypter;
     }
 
     /**
@@ -55,23 +58,21 @@ abstract class AbstractJsonApiLoader
      * @return ResourceObject|null
      * @throws ElementNotFoundException
      */
-    abstract public function getById(int $id): resourceObject;
+    abstract public function getById(int $id): ResourceObject;
 
     /**
      * @param string $resourceBuilder
      * @param array $data
-     * @param EncrypterInterface|null $encrypter
      * @param bool $addRelationships
-     * @return resourceObject
+     * @return ResourceObject
      */
     final protected function generateResourceObject(
         string $resourceBuilder,
         array $data,
-        ?EncrypterInterface $encrypter=null,
         bool $addRelationships=true
-    ): resourceObject
+    ): ResourceObject
     {
-        $response = $this->resourceBuilder->create($resourceBuilder, $data, $encrypter)->buildResource();
+        $response = $this->resourceBuilder->create($resourceBuilder, $data, $this->encrypter)->buildResource();
 
         if ($addRelationships) {
             $this->addRelationships($response, $data);
@@ -84,87 +85,100 @@ abstract class AbstractJsonApiLoader
     }
 
     /**
-     * @param resourceObject $object
+     * @param ResourceObject $object
      * @param array $data
      */
-    protected function addLinks(resourceObject $object, array $data) : void
+    protected function addLinks(ResourceObject $object, array $data) : void
     {
     }
 
     /**
-     * @param resourceObject $object
+     * @param ResourceObject $object
      * @param array $data
      */
-    protected function addMeta(resourceObject $object, array $data) : void
+    protected function addMeta(ResourceObject $object, array $data) : void
     {
     }
 
     /**
-     * @param resourceObject $object
+     * @param ResourceObject $object
      * @param array $data
      */
-    protected function addRelationships(resourceObject $object, array $data) : void
+    protected function addRelationships(ResourceObject $object, array $data) : void
     {
     }
 
     /**
-     * @param array $cacheParameters
+     * @param array|null $cacheParameters
      * @param callable $dataMethod
      * @param array $dataParameters
-     * @param EncrypterInterface|null $encrypter
      * @param bool $addRelationship
-     * @return resourceObject
+     * @return ResourceObject
      * @throws Exception
      */
-    protected function getSingle(array $cacheParameters, callable $dataMethod, array $dataParameters, ?EncrypterInterface $encrypter=null, bool $addRelationship=true): resourceObject
+    protected function getSingle(?array $cacheParameters, callable $dataMethod, array $dataParameters, bool $addRelationship=true): ResourceObject
     {
-        $response = null;
-        $cache = null;
+        if ($this->cacher->useCaching()) {
+            $response = null;
+            $cache = null;
 
-        try {
-            $cacheClass = new ReflectionClass($this->cache);
+            try {
+                $cacheClass = new ReflectionClass($this->cache);
 
-            /** @var CacheInterface $cache */
-            $cache = $cacheClass->newInstanceArgs($cacheParameters);
-        } catch (ReflectionException $e) {
-            $this->services->logger()
-                ->error()
-                ->log(
-                    DataErrorEvent::CACHE_CLASS_NOT_FOUND($this->cache, $e)
-                )
-                ->throw();
-        }
-
-        try {
-            /** @noinspection UnserializeExploitsInspection */
-            $response = unserialize($this->cacher->read($cache));
-        } catch (CacheNotFoundException $e) {
-            $data = call_user_func_array($dataMethod, $dataParameters);
-
-            if ($data === null) {
-                DataErrorEvent::DATA_NOT_FOUND($e)->throw();
+                /** @var CacheInterface $cache */
+                $cache = $cacheClass->newInstanceArgs($cacheParameters);
+            } catch (ReflectionException $e) {
+                $this->services->logger()
+                    ->error()
+                    ->log(
+                        DataErrorEvent::CACHE_CLASS_NOT_FOUND($this->cache, $e)
+                    )
+                    ->throw();
             }
 
-            $response = $this->generateResourceObject($this->resourceBuilderClass, $data, $encrypter, $addRelationship);
+            try {
+                /** @noinspection UnserializeExploitsInspection */
+                $response = unserialize($this->cacher->read($cache));
+            } catch (CacheNotFoundException $e) {
 
-            if ($addRelationship) {
+                $this->getSingleFromDatabase($dataMethod, $dataParameters, $addRelationship);
+
                 $this->cacher->create($cache, serialize($response));
             }
+        } else {
+            $response = $this->getSingleFromDatabase($dataMethod, $dataParameters, $addRelationship);
         }
 
         return $response;
     }
 
     /**
-     * @param array $cacheParameters
      * @param callable $dataMethod
      * @param array $dataParameters
-     * @param EncrypterInterface|null $encrypter
+     * @param bool $addRelationship
+     * @return ResourceObject
+     * @throws Exception
+     */
+    private function getSingleFromDatabase(callable $dataMethod, array $dataParameters, bool $addRelationship=true) : ResourceObject
+    {
+        $data = call_user_func_array($dataMethod, $dataParameters);
+
+        if ($data === null) {
+            DataErrorEvent::DATA_NOT_FOUND()->throw();
+        }
+
+        return $this->generateResourceObject($this->resourceBuilderClass, $data, $addRelationship);
+    }
+
+    /**
+     * @param array|null $cacheParameters
+     * @param callable $dataMethod
+     * @param array $dataParameters
      * @param bool $addRelationship
      * @return array
      * @throws Exception
      */
-    protected function getList(array $cacheParameters, callable $dataMethod, array $dataParameters, ?EncrypterInterface $encrypter=null, bool $addRelationship=true): array
+    protected function getList(?array $cacheParameters, callable $dataMethod, array $dataParameters, bool $addRelationship=true): array
     {
         $response = null;
         $cache = null;
@@ -187,21 +201,33 @@ abstract class AbstractJsonApiLoader
             /** @noinspection UnserializeExploitsInspection */
             $response = unserialize($this->cacher->read($cache));
         } catch (CacheNotFoundException $e) {
-            $data = call_user_func_array($dataMethod, $dataParameters);
+            $response = $this->getListFromDatabase($dataMethod, $dataParameters, $addRelationship);
 
-            if ($data === null) {
-                DataErrorEvent::DATA_NOT_FOUND($e)->throw();
-            }
+            $this->cacher->create($cache, serialize($response));
+        }
 
-            $response = [];
+        return $response;
+    }
 
-            foreach ($data as $record){
-                $response[] = $this->generateResourceObject($this->resourceBuilderClass, $record, $encrypter, $addRelationship);
-            }
+    /**
+     * @param callable $dataMethod
+     * @param array $dataParameters
+     * @param bool $addRelationship
+     * @return array
+     * @throws Exception
+     */
+    private function getListFromDatabase(callable $dataMethod, array $dataParameters, bool $addRelationship=true): array
+    {
+        $data = call_user_func_array($dataMethod, $dataParameters);
 
-            if ($addRelationship) {
-                $this->cacher->create($cache, serialize($response));
-            }
+        if ($data === null) {
+            DataErrorEvent::DATA_NOT_FOUND()->throw();
+        }
+
+        $response = [];
+
+        foreach ($data as $record){
+            $response[] = $this->generateResourceObject($this->resourceBuilderClass, $record, $addRelationship);
         }
 
         return $response;
