@@ -265,4 +265,19 @@ abstract class AbstractWrapper
 
         return $response;
     }
+
+    /**
+     * @param int $adId
+     * @return array
+     * @throws ElementNotFoundException
+     */
+    public function loadFromId(int $adId) : array
+    {
+        return $this->getGeneric(
+            null,
+            null,
+            [$this->table, 'loadFromId'],
+            [$adId]
+        );
+    }
 }
