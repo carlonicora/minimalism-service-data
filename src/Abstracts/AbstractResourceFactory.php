@@ -10,6 +10,7 @@ use CarloNicora\Minimalism\Services\Cacher\Exceptions\CacheNotFoundException;
 use CarloNicora\Minimalism\Services\Cacher\Interfaces\CacheInterface;
 use CarloNicora\Minimalism\Services\Data\Events\DataErrorEvent;
 use CarloNicora\Minimalism\Services\Data\Exceptions\ElementNotFoundException;
+use CarloNicora\Minimalism\Services\MySQL\Interfaces\TableInterface;
 use CarloNicora\Minimalism\Services\ResourceBuilder\ResourceBuilder;
 use Exception;
 use ReflectionClass;
@@ -29,14 +30,17 @@ abstract class AbstractResourceFactory
     /** @var Cacher  */
     private Cacher $serviceCacher;
 
-    /** @var string  */
-    protected string $configurationCacheName;
+    /** @var string|null  */
+    protected ?string $configurationCacheName=null;
 
     /** @var string  */
     protected string $configurationMicroserviceName;
 
     /** @var string  */
     protected string $configurationResourceBuilderClassName;
+
+    /** @var TableInterface  */
+    protected TableInterface $configurationTable;
 
     /**
      * campaignLoader constructor.
