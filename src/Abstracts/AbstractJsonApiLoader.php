@@ -180,30 +180,34 @@ abstract class AbstractJsonApiLoader
      */
     protected function getList(?array $cacheParameters, callable $dataMethod, array $dataParameters, bool $addRelationship=true): array
     {
-        $response = null;
-        $cache = null;
+        if ($this->cacher->useCaching()) {
+            $response = null;
+            $cache = null;
 
-        try {
-            $cacheClass = new ReflectionClass($this->cache);
+            try {
+                $cacheClass = new ReflectionClass($this->cache);
 
-            /** @var abstractCache $cache */
-            $cache = $cacheClass->newInstanceArgs($cacheParameters);
-        } catch (ReflectionException $e) {
-            $this->services->logger()
-                ->error()
-                ->log(
-                    DataErrorEvent::CACHE_CLASS_NOT_FOUND($this->cache, $e)
-                )
-                ->throw();
-        }
+                /** @var abstractCache $cache */
+                $cache = $cacheClass->newInstanceArgs($cacheParameters);
+            } catch (ReflectionException $e) {
+                $this->services->logger()
+                    ->error()
+                    ->log(
+                        DataErrorEvent::CACHE_CLASS_NOT_FOUND($this->cache, $e)
+                    )
+                    ->throw();
+            }
 
-        try {
-            /** @noinspection UnserializeExploitsInspection */
-            $response = unserialize($this->cacher->read($cache));
-        } catch (CacheNotFoundException $e) {
+            try {
+                /** @noinspection UnserializeExploitsInspection */
+                $response = unserialize($this->cacher->read($cache));
+            } catch (CacheNotFoundException $e) {
+                $response = $this->getListFromDatabase($dataMethod, $dataParameters, $addRelationship);
+
+                $this->cacher->create($cache, serialize($response));
+            }
+        } else {
             $response = $this->getListFromDatabase($dataMethod, $dataParameters, $addRelationship);
-
-            $this->cacher->create($cache, serialize($response));
         }
 
         return $response;
