@@ -42,6 +42,9 @@ abstract class AbstractResourceFactory
     /** @var TableInterface  */
     protected TableInterface $configurationTable;
 
+    /** @var AbstractWrapper  */
+    protected AbstractWrapper $dataWrapper;
+
     /**
      * campaignLoader constructor.
      * @param ServicesFactory $services
