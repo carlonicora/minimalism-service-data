@@ -18,7 +18,6 @@ use ReflectionException;
 
 abstract class AbstractWrapper
 {
-
     /** @var ServicesFactory  */
     protected ServicesFactory $services;
 
@@ -91,6 +90,10 @@ abstract class AbstractWrapper
      */
     final protected function getFromRedis(string $key) :?array
     {
+        if (!$this->cacher->useCaching()) {
+            return null;
+        }
+
         try {
             $recordOrKey = $this->redis->get($key);
 
@@ -112,6 +115,10 @@ abstract class AbstractWrapper
      */
     final protected function setInRedis(string $key, array $value) : void
     {
+        if (!$this->cacher->useCaching()) {
+            return;
+        }
+
         try {
             $this->redis->set(
                 $key,
@@ -126,6 +133,10 @@ abstract class AbstractWrapper
      */
     final protected function setLinkInRedis(string $key, string $value) : void
     {
+        if (!$this->cacher->useCaching()) {
+            return;
+        }
+
         try {
             $this->redis->set(
                 $key,
@@ -144,30 +155,44 @@ abstract class AbstractWrapper
      */
     public function getGeneric(string $cacheName, array $cacheParameters, callable $dataLoader, array $dataLoaderParameters)
     {
-        try {
-            $cacheClass = new ReflectionClass($cacheName);
-            /** @var CacheInterface $cache */
-            $cache = $cacheClass->newInstanceArgs($cacheParameters);
-        } catch (ReflectionException $e) {
-            return null;
-        }
-
-        try {
-            $response = $this->cacher->readArray($cache);
-        } catch (CacheNotFoundException $e) {
+        if ($this->cacher->useCaching()) {
             try {
-                $response = call_user_func_array($dataLoader, $dataLoaderParameters);
-                if (is_array($response)){
-                    $this->cacher->createArray($cache, $response);
-                } else {
-                    $this->cacher->create($cache, (string)$response);
-                }
-            } catch (Exception $e) {
-                throw new ElementNotFoundException($e->getMessage());
+                $cacheClass = new ReflectionClass($cacheName);
+                /** @var CacheInterface $cache */
+                $cache = $cacheClass->newInstanceArgs($cacheParameters);
+            } catch (ReflectionException $e) {
+                return null;
             }
+
+            try {
+                $response = $this->cacher->readArray($cache);
+            } catch (CacheNotFoundException $e) {
+                try {
+                    $response = $this->getGenericFromDatabase($dataLoader, $dataLoaderParameters);
+                    if (is_array($response)) {
+                        $this->cacher->createArray($cache, $response);
+                    } else {
+                        $this->cacher->create($cache, (string)$response);
+                    }
+                } catch (Exception $e) {
+                    throw new ElementNotFoundException($e->getMessage());
+                }
+            }
+        } else {
+            $response = $this->getGenericFromDatabase($dataLoader, $dataLoaderParameters);
         }
 
         return $response;
+    }
+
+    /**
+     * @param callable $dataLoader
+     * @param array $dataLoaderParameters
+     * @return mixed
+     */
+    private function getGenericFromDatabase(callable $dataLoader, array $dataLoaderParameters)
+    {
+        return call_user_func_array($dataLoader, $dataLoaderParameters);
     }
 
     /**
@@ -182,35 +207,52 @@ abstract class AbstractWrapper
      */
     public function getGenericWithChildren(string $cacheName, array $cacheParameters, callable $dataLoader, array $dataLoaderParameters, array $childCacheParameters , string $recordId) : ?array
     {
-        try {
-            $cacheClass = new ReflectionClass($cacheName);
-            /** @var cacheInterface $cache */
-            $cache = $cacheClass->newInstanceArgs($cacheParameters);
-        } catch (ReflectionException $e) {
-            return null;
+        if ($this->cacher->useCaching()) {
+            try {
+                $cacheClass = new ReflectionClass($cacheName);
+                /** @var cacheInterface $cache */
+                $cache = $cacheClass->newInstanceArgs($cacheParameters);
+            } catch (ReflectionException $e) {
+                return null;
+            }
+
+            try {
+                $response = $this->cacher->readArray($cache);
+            } catch (cacheNotFoundException $e) {
+                try {
+                    $response = $this->getGenericListWithChildrenFromDatabase($dataLoader, $dataLoaderParameters);
+
+                    $this->cacher->createArray($cache, $response);
+
+                    foreach ($response as $record) {
+                        /** @var cacheInterface $cache */
+                        $childCacheParameters[] = $record[$recordId];
+                        $cache = $cacheClass->newInstanceArgs($childCacheParameters);
+                        $this->cacher->createArray($cache, $record);
+                    }
+                } catch (Exception $e) {
+                    throw new elementNotFoundException($e->getMessage());
+                }
+            }
+        } else {
+            $response = $this->getGenericListWithChildrenFromDatabase($dataLoader, $dataLoaderParameters);
         }
 
-        try {
-            $response = $this->cacher->readArray($cache);
-        } catch (cacheNotFoundException $e) {
-            try {
-                $response = call_user_func_array($dataLoader, $dataLoaderParameters);
+        return $response;
+    }
 
-                if ($response === null || count($response) === 0){
-                    throw new ElementNotFoundException('');
-                }
+    /**
+     * @param callable $dataLoader
+     * @param array $dataLoaderParameters
+     * @return array
+     * @throws ElementNotFoundException
+     */
+    public function getGenericListWithChildrenFromDatabase(callable $dataLoader, array $dataLoaderParameters) : array
+    {
+        $response = call_user_func_array($dataLoader, $dataLoaderParameters);
 
-                $this->cacher->createArray($cache, $response);
-
-                foreach ($response as $record){
-                    /** @var cacheInterface $cache */
-                    $childCacheParameters[] = $record[$recordId];
-                    $cache = $cacheClass->newInstanceArgs($childCacheParameters);
-                    $this->cacher->createArray($cache, $record);
-                }
-            } catch (Exception $e) {
-                throw new elementNotFoundException($e->getMessage());
-            }
+        if ($response === null || count($response) === 0) {
+            throw new ElementNotFoundException('');
         }
 
         return $response;
