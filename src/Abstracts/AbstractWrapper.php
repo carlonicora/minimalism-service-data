@@ -7,6 +7,7 @@ use CarloNicora\Minimalism\Services\Cacher\Cacher;
 use CarloNicora\Minimalism\Services\Cacher\Exceptions\CacheNotFoundException;
 use CarloNicora\Minimalism\Services\Cacher\Interfaces\CacheInterface;
 use CarloNicora\Minimalism\Services\Data\Exceptions\ElementNotFoundException;
+use CarloNicora\Minimalism\Services\MySQL\Interfaces\TableInterface;
 use CarloNicora\Minimalism\Services\MySQL\MySQL;
 use CarloNicora\Minimalism\Services\Redis\Exceptions\RedisConnectionException;
 use CarloNicora\Minimalism\Services\Redis\Exceptions\RedisKeyNotFoundException;
@@ -30,6 +31,12 @@ abstract class AbstractWrapper
     /** @var Cacher  */
     protected Cacher $cacher;
 
+    /** @var TableInterface  */
+    protected TableInterface $table;
+
+    /** @var string  */
+    protected string $configurationTable;
+
     /**
      * abstractWrapper constructor.
      * @param ServicesFactory $services
@@ -42,6 +49,8 @@ abstract class AbstractWrapper
         $this->redis = $services->service(Redis::class);
         $this->database = $services->service(MySQL::class);
         $this->cacher = $services->service(Cacher::class);
+
+        $this->table = $this->database->create($this->configurationTable);
     }
 
     /**
@@ -186,16 +195,26 @@ abstract class AbstractWrapper
     }
 
     /**
-     * @param string|null $cacheName
-     * @param array|null $cacheParameters
-     * @param array|null $childCacheParameters
-     * @param string|null $recordId
      * @param callable $dataLoader
      * @param array $dataLoaderParameters
+     * @return mixed
+     */
+    private function getGenericFromDatabase(callable $dataLoader, array $dataLoaderParameters)
+    {
+        return call_user_func_array($dataLoader, $dataLoaderParameters);
+    }
+
+    /**
+     * @param string|null $cacheName
+     * @param array|null $cacheParameters
+     * @param callable $dataLoader
+     * @param array $dataLoaderParameters
+     * @param array $childCacheParameters
+     * @param string $recordId
      * @return array|null
      * @throws ElementNotFoundException
      */
-    public function getGenericWithChildren(?string $cacheName, ?array $cacheParameters, ?array $childCacheParameters , ?string $recordId, callable $dataLoader, array $dataLoaderParameters) : ?array
+    public function getGenericWithChildren(?string $cacheName, ?array $cacheParameters, callable $dataLoader, array $dataLoaderParameters, array $childCacheParameters , string $recordId) : ?array
     {
         if ($this->cacher->useCaching()) {
             try {
@@ -229,16 +248,6 @@ abstract class AbstractWrapper
         }
 
         return $response;
-    }
-
-    /**
-     * @param callable $dataLoader
-     * @param array $dataLoaderParameters
-     * @return mixed
-     */
-    private function getGenericFromDatabase(callable $dataLoader, array $dataLoaderParameters)
-    {
-        return call_user_func_array($dataLoader, $dataLoaderParameters);
     }
 
     /**
