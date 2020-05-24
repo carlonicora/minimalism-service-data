@@ -146,14 +146,14 @@ abstract class AbstractWrapper
     }
 
     /**
-     * @param string $cacheName
-     * @param array $cacheParameters
+     * @param string|null $cacheName
+     * @param array|null $cacheParameters
      * @param callable $dataLoader
      * @param array $dataLoaderParameters
      * @return int|string|array|null
      * @throws ElementNotFoundException
      */
-    public function getGeneric(string $cacheName, array $cacheParameters, callable $dataLoader, array $dataLoaderParameters)
+    public function getGeneric(?string $cacheName, ?array $cacheParameters, callable $dataLoader, array $dataLoaderParameters)
     {
         if ($this->cacher->useCaching()) {
             try {
@@ -196,8 +196,8 @@ abstract class AbstractWrapper
     }
 
     /**
-     * @param string $cacheName
-     * @param array $cacheParameters
+     * @param string|null $cacheName
+     * @param array|null $cacheParameters
      * @param callable $dataLoader
      * @param array $dataLoaderParameters
      * @param array $childCacheParameters
@@ -205,7 +205,7 @@ abstract class AbstractWrapper
      * @return array|null
      * @throws ElementNotFoundException
      */
-    public function getGenericWithChildren(string $cacheName, array $cacheParameters, callable $dataLoader, array $dataLoaderParameters, array $childCacheParameters , string $recordId) : ?array
+    public function getGenericWithChildren(?string $cacheName, ?array $cacheParameters, callable $dataLoader, array $dataLoaderParameters, array $childCacheParameters , string $recordId) : ?array
     {
         if ($this->cacher->useCaching()) {
             try {
