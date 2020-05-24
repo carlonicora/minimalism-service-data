@@ -2,6 +2,7 @@
 namespace CarloNicora\Minimalism\Services\Data\Abstracts;
 
 use CarloNicora\Minimalism\Core\Services\Factories\ServicesFactory;
+use CarloNicora\Minimalism\Interfaces\EncrypterInterface;
 
 abstract class AbstactResourceLoaderFactory
 {
@@ -22,12 +23,13 @@ abstract class AbstactResourceLoaderFactory
 
     /**
      * @param string $resourceFactoryName
+     * @param EncrypterInterface|null $encrypter
      * @return AbstractResourceFactory
      */
-    final protected function getResourceFactory(string $resourceFactoryName) : AbstractResourceFactory
+    final protected function getResourceFactory(string $resourceFactoryName, ?EncrypterInterface $encrypter) : AbstractResourceFactory
     {
         if (!array_key_exists($resourceFactoryName, $this->loaders)) {
-            $this->loaders[$resourceFactoryName] = new $resourceFactoryName($this->services);
+            $this->loaders[$resourceFactoryName] = new $resourceFactoryName($this->services, $encrypter);
         }
 
         /** @var AbstractResourceFactory $response */
