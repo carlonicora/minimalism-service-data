@@ -186,26 +186,16 @@ abstract class AbstractWrapper
     }
 
     /**
-     * @param callable $dataLoader
-     * @param array $dataLoaderParameters
-     * @return mixed
-     */
-    private function getGenericFromDatabase(callable $dataLoader, array $dataLoaderParameters)
-    {
-        return call_user_func_array($dataLoader, $dataLoaderParameters);
-    }
-
-    /**
      * @param string|null $cacheName
      * @param array|null $cacheParameters
+     * @param array|null $childCacheParameters
+     * @param string|null $recordId
      * @param callable $dataLoader
      * @param array $dataLoaderParameters
-     * @param array $childCacheParameters
-     * @param string $recordId
      * @return array|null
      * @throws ElementNotFoundException
      */
-    public function getGenericWithChildren(?string $cacheName, ?array $cacheParameters, callable $dataLoader, array $dataLoaderParameters, array $childCacheParameters , string $recordId) : ?array
+    public function getGenericWithChildren(?string $cacheName, ?array $cacheParameters, ?array $childCacheParameters , ?string $recordId, callable $dataLoader, array $dataLoaderParameters) : ?array
     {
         if ($this->cacher->useCaching()) {
             try {
@@ -239,6 +229,16 @@ abstract class AbstractWrapper
         }
 
         return $response;
+    }
+
+    /**
+     * @param callable $dataLoader
+     * @param array $dataLoaderParameters
+     * @return mixed
+     */
+    private function getGenericFromDatabase(callable $dataLoader, array $dataLoaderParameters)
+    {
+        return call_user_func_array($dataLoader, $dataLoaderParameters);
     }
 
     /**
