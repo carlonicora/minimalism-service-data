@@ -24,7 +24,12 @@ interface DataCallerInterface
     );
 
     /**
+     * @return array
+     */
+    public function getSingle() : array;
+
+    /**
      * @return array|null
      */
-    public function execute() : ?array;
+    public function getList() : ?array;
 }

@@ -65,22 +65,9 @@ class DataCallerFacade implements DataCallerInterface
     }
 
     /**
-     * @return array|null
-     * @throws Exception
-     */
-    public function execute(): ?array
-    {
-        if ($this->dataCache->implementsGranularCache()){
-            return $this->getList();
-        }
-
-        return $this->getSingle();
-    }
-
-    /**
      * @return array
      */
-    private function getSingle() : array
+    public function getSingle() : array
     {
         if ($this->dataCache !== null && $this->cacher->useCaching() && ($cache = $this->dataCache->generateCache()) !== null) {
             try {

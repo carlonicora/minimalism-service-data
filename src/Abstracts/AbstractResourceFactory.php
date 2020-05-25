@@ -179,7 +179,7 @@ abstract class AbstractResourceFactory
         bool $addRelationship=true
     ) : ResourceObject
     {
-        if (($data = $dataCaller->execute()) === null) {
+        if (($data = $dataCaller->getSingle()) === null) {
             DataErrorEvent::DATA_NOT_FOUND()->throw();
         }
 
@@ -197,13 +197,9 @@ abstract class AbstractResourceFactory
         bool $addRelationship=true
     ) : array
     {
-        if (($data = $dataCaller->execute()) === null) {
-            DataErrorEvent::DATA_NOT_FOUND()->throw();
-        }
-
         $response = [];
 
-        foreach ($data as $record){
+        foreach ($dataCaller->getList() ?? [] as $record){
             $response[] = $this->generateResourceObject($this->configurationResourceBuilderClassName, $record, $addRelationship);
         }
 
