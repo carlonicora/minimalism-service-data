@@ -161,7 +161,7 @@ abstract class AbstractWrapper
      * @return int|string|array|null
      * @throws ElementNotFoundException
      */
-    public function getGeneric(?string $cacheName, ?array $cacheParameters, callable $dataLoader, array $dataLoaderParameters)
+    public function getSingle(?string $cacheName, ?array $cacheParameters, callable $dataLoader, array $dataLoaderParameters)
     {
         if ($this->cacher->useCaching()) {
             try {
@@ -194,16 +194,6 @@ abstract class AbstractWrapper
     }
 
     /**
-     * @param callable $dataLoader
-     * @param array $dataLoaderParameters
-     * @return mixed
-     */
-    private function getGenericFromDatabase(callable $dataLoader, array $dataLoaderParameters)
-    {
-        return call_user_func_array($dataLoader, $dataLoaderParameters);
-    }
-
-    /**
      * @param string|null $cacheName
      * @param array|null $cacheParameters
      * @param array|null $childCacheParameters
@@ -211,9 +201,8 @@ abstract class AbstractWrapper
      * @param callable $dataLoader
      * @param array $dataLoaderParameters
      * @return array|null
-     * @throws ElementNotFoundException
      */
-    public function getGenericWithChildren(?string $cacheName, ?array $cacheParameters, ?array $childCacheParameters , ?string $recordId, callable $dataLoader, array $dataLoaderParameters) : ?array
+    public function getList(?string $cacheName, ?array $cacheParameters, ?array $childCacheParameters , ?string $recordId, callable $dataLoader, array $dataLoaderParameters) : ?array
     {
         if ($this->cacher->useCaching()) {
             try {
@@ -227,23 +216,21 @@ abstract class AbstractWrapper
             try {
                 $response = $this->cacher->readArray($cache);
             } catch (cacheNotFoundException $e) {
-                try {
-                    $response = $this->getGenericListWithChildrenFromDatabase($dataLoader, $dataLoaderParameters);
+                $response = $this->getGenericFromDatabase($dataLoader, $dataLoaderParameters);
 
+                if ($response !== null) {
                     $this->cacher->createArray($cache, $response);
 
-                    foreach ($response as $record) {
+                    foreach ($response ?? [] as $record) {
                         /** @var cacheInterface $cache */
                         $childCacheParameters[] = $record[$recordId];
                         $cache = $cacheClass->newInstanceArgs($childCacheParameters);
                         $this->cacher->createArray($cache, $record);
                     }
-                } catch (Exception $e) {
-                    throw new elementNotFoundException($e->getMessage());
                 }
             }
         } else {
-            $response = $this->getGenericListWithChildrenFromDatabase($dataLoader, $dataLoaderParameters);
+            $response = $this->getGenericFromDatabase($dataLoader, $dataLoaderParameters);
         }
 
         return $response;
@@ -252,18 +239,11 @@ abstract class AbstractWrapper
     /**
      * @param callable $dataLoader
      * @param array $dataLoaderParameters
-     * @return array
-     * @throws ElementNotFoundException
+     * @return mixed
      */
-    public function getGenericListWithChildrenFromDatabase(callable $dataLoader, array $dataLoaderParameters) : array
+    private function getGenericFromDatabase(callable $dataLoader, array $dataLoaderParameters)
     {
-        $response = call_user_func_array($dataLoader, $dataLoaderParameters);
-
-        if ($response === null || count($response) === 0) {
-            throw new ElementNotFoundException('');
-        }
-
-        return $response;
+        return call_user_func_array($dataLoader, $dataLoaderParameters);
     }
 
     /**
@@ -273,7 +253,7 @@ abstract class AbstractWrapper
      */
     public function loadFromId(int $adId) : array
     {
-        return $this->getGeneric(
+        return $this->getSingle(
             null,
             null,
             [$this->table, 'loadFromId'],
