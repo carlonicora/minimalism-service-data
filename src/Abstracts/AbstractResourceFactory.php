@@ -4,17 +4,15 @@ namespace CarloNicora\Minimalism\Services\Data\Abstracts;
 use CarloNicora\JsonApi\Objects\ResourceObject;
 use CarloNicora\Minimalism\Core\Services\Factories\ServicesFactory;
 use CarloNicora\Minimalism\Interfaces\EncrypterInterface;
-use CarloNicora\Minimalism\Services\Cacher\Abstracts\AbstractCache;
 use CarloNicora\Minimalism\Services\Cacher\Cacher;
 use CarloNicora\Minimalism\Services\Cacher\Exceptions\CacheNotFoundException;
-use CarloNicora\Minimalism\Services\Cacher\Interfaces\CacheInterface;
+use CarloNicora\Minimalism\Services\Cacher\Interfaces\CacheFactoryInterface;
 use CarloNicora\Minimalism\Services\Data\Events\DataErrorEvent;
 use CarloNicora\Minimalism\Services\Data\Exceptions\ElementNotFoundException;
+use CarloNicora\Minimalism\Services\Data\Interfaces\DataCallerInterface;
 use CarloNicora\Minimalism\Services\MySQL\Interfaces\TableInterface;
 use CarloNicora\Minimalism\Services\ResourceBuilder\ResourceBuilder;
 use Exception;
-use ReflectionClass;
-use ReflectionException;
 
 abstract class AbstractResourceFactory
 {
@@ -41,9 +39,6 @@ abstract class AbstractResourceFactory
 
     /** @var TableInterface  */
     protected TableInterface $configurationTable;
-
-    /** @var AbstractWrapper  */
-    protected AbstractWrapper $dataWrapper;
 
     /**
      * campaignLoader constructor.
@@ -116,104 +111,79 @@ abstract class AbstractResourceFactory
     }
 
     /**
-     * @param array|null $cacheParameters
-     * @param callable $dataMethod
-     * @param array $dataParameters
+     * @param CacheFactoryInterface|null $resourceCache
+     * @param DataCallerInterface $dataCaller
      * @param bool $addRelationship
      * @return ResourceObject
      * @throws Exception
      */
-    final protected function getSingle(?array $cacheParameters, callable $dataMethod, array $dataParameters, bool $addRelationship=true): ResourceObject
+    final protected function getSingle(
+        ?CacheFactoryInterface $resourceCache,
+        DataCallerInterface $dataCaller,
+        bool $addRelationship=true
+    ): ResourceObject
     {
-        if ($this->serviceCacher->useCaching()) {
-            $response = null;
-            $cache = null;
+        $response = null;
 
-            try {
-                $cacheClass = new ReflectionClass($this->configurationCacheName);
-
-                /** @var CacheInterface $cache */
-                $cache = $cacheClass->newInstanceArgs($cacheParameters);
-            } catch (ReflectionException $e) {
-                $this->services->logger()
-                    ->error()
-                    ->log(
-                        DataErrorEvent::CACHE_CLASS_NOT_FOUND($this->configurationCacheName, $e)
-                    )
-                    ->throw();
-            }
-
+        if ($resourceCache !== null && $this->serviceCacher->useCaching() && ($cache = $resourceCache->generateCache()) !== null) {
             try {
                 /** @noinspection UnserializeExploitsInspection */
                 $response = unserialize($this->serviceCacher->read($cache));
             } catch (CacheNotFoundException $e) {
-
-                $this->getSingleFromDatabase($dataMethod, $dataParameters, $addRelationship);
+                $response = $this->getSingleFromDatabase($dataCaller, $addRelationship);
 
                 $this->serviceCacher->create($cache, serialize($response));
             }
         } else {
-            $response = $this->getSingleFromDatabase($dataMethod, $dataParameters, $addRelationship);
+            $response = $this->getSingleFromDatabase($dataCaller, $addRelationship);
         }
 
         return $response;
     }
 
     /**
-     * @param array|null $cacheParameters
-     * @param callable $dataMethod
-     * @param array $dataParameters
+     * @param CacheFactoryInterface|null $resourceCache
+     * @param DataCallerInterface $dataCaller
      * @param bool $addRelationship
      * @return array
      * @throws Exception
      */
-    final protected function getList(?array $cacheParameters, callable $dataMethod, array $dataParameters, bool $addRelationship=true): array
+    final protected function getList(
+        ?CacheFactoryInterface $resourceCache,
+        DataCallerInterface $dataCaller,
+        bool $addRelationship=true
+    ): array
     {
-        if ($this->serviceCacher->useCaching()) {
-            $response = null;
-            $cache = null;
+        $response = null;
 
-            try {
-                $cacheClass = new ReflectionClass($this->configurationCacheName);
-
-                /** @var abstractCache $cache */
-                $cache = $cacheClass->newInstanceArgs($cacheParameters);
-            } catch (ReflectionException $e) {
-                $this->services->logger()
-                    ->error()
-                    ->log(
-                        DataErrorEvent::CACHE_CLASS_NOT_FOUND($this->configurationCacheName, $e)
-                    )
-                    ->throw();
-            }
-
+        if ($resourceCache !== null && $this->serviceCacher->useCaching() && ($cache = $resourceCache->generateCache()) !== null) {
             try {
                 /** @noinspection UnserializeExploitsInspection */
                 $response = unserialize($this->serviceCacher->read($cache));
             } catch (CacheNotFoundException $e) {
-                $response = $this->getListFromDatabase($dataMethod, $dataParameters, $addRelationship);
+                $response = $this->getListFromDatabase($dataCaller, $addRelationship);
 
                 $this->serviceCacher->create($cache, serialize($response));
             }
         } else {
-            $response = $this->getListFromDatabase($dataMethod, $dataParameters, $addRelationship);
+            $response = $this->getListFromDatabase($dataCaller, $addRelationship);
         }
 
         return $response;
     }
 
     /**
-     * @param callable $dataMethod
-     * @param array $dataParameters
+     * @param DataCallerInterface $dataCaller
      * @param bool $addRelationship
      * @return ResourceObject
      * @throws Exception
      */
-    private function getSingleFromDatabase(callable $dataMethod, array $dataParameters, bool $addRelationship=true) : ResourceObject
+    private function getSingleFromDatabase(
+        DataCallerInterface $dataCaller,
+        bool $addRelationship=true
+    ) : ResourceObject
     {
-        $data = call_user_func_array($dataMethod, $dataParameters);
-
-        if ($data === null) {
+        if (($data = $dataCaller->execute()) === null) {
             DataErrorEvent::DATA_NOT_FOUND()->throw();
         }
 
@@ -221,17 +191,17 @@ abstract class AbstractResourceFactory
     }
 
     /**
-     * @param callable $dataMethod
-     * @param array $dataParameters
+     * @param DataCallerInterface $dataCaller
      * @param bool $addRelationship
      * @return array
      * @throws Exception
      */
-    private function getListFromDatabase(callable $dataMethod, array $dataParameters, bool $addRelationship=true): array
+    private function getListFromDatabase(
+        DataCallerInterface $dataCaller,
+        bool $addRelationship=true
+    ) : array
     {
-        $data = call_user_func_array($dataMethod, $dataParameters);
-
-        if ($data === null) {
+        if (($data = $dataCaller->execute()) === null) {
             DataErrorEvent::DATA_NOT_FOUND()->throw();
         }
 
