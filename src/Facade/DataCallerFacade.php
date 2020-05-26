@@ -1,4 +1,5 @@
-<?php
+<?php /** @noinspection PhpDocRedundantThrowsInspection */
+
 namespace CarloNicora\Minimalism\Services\Data\Facade;
 
 use CarloNicora\Minimalism\Core\Services\Factories\ServicesFactory;
@@ -6,6 +7,7 @@ use CarloNicora\Minimalism\Services\Cacher\Cacher;
 use CarloNicora\Minimalism\Services\Cacher\Exceptions\CacheNotFoundException;
 use CarloNicora\Minimalism\Services\Cacher\Interfaces\CacheFactoryInterface;
 use CarloNicora\Minimalism\Services\Data\Interfaces\DataCallerInterface;
+use CarloNicora\Minimalism\Services\MySQL\Exceptions\DbRecordNotFoundException;
 use CarloNicora\Minimalism\Services\MySQL\Interfaces\TableInterface;
 use CarloNicora\Minimalism\Services\MySQL\MySQL;
 use CarloNicora\Minimalism\Services\Redis\Redis;
@@ -66,6 +68,7 @@ class DataCallerFacade implements DataCallerInterface
 
     /**
      * @return array
+     * @throws DbRecordNotFoundException
      */
     public function getSingle() : array
     {
