@@ -34,4 +34,9 @@ interface DataCallerInterface
      * @return array|null
      */
     public function getList() : ?array;
+
+    /**
+     * @return int
+     */
+    public function getCount() : int;
 }

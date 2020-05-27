@@ -124,4 +124,26 @@ class DataCallerFacade implements DataCallerInterface
 
         return $response;
     }
+
+    /**
+     * @return int
+     */
+    public function getCount() : int
+    {
+        if ($this->dataCache !== null && $this->cacher->useCaching() && ($cache = $this->dataCache->generateCache()) !== null) {
+            try {
+                $response = (int)$this->cacher->read($cache);
+            } catch (cacheNotFoundException $e) {
+                $response = (int)$this->table->{$this->functionName}(...$this->functionParameters);
+
+                if ($response !== null) {
+                    $this->cacher->create($cache, $response);
+                }
+            }
+        } else {
+            $response = (int)$this->table->{$this->functionName}(...$this->functionParameters);
+        }
+
+        return $response;
+    }
 }
