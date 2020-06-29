@@ -1,12 +1,12 @@
 {
   "name": "carlonicora/minimalism-service-data",
   "description": "Data service for minimalism",
-  "version": "1.0.0-beta25",
+  "version": "1.0.0",
   "homepage": "https://carlonicora.com",
   "time": "2019-05-24",
   "license": "MIT",
   "type": "library",
-  "minimum-stability": "beta",
+  "minimum-stability": "stable",
   "authors": [
     {
       "name": "Carlo Nicora",
