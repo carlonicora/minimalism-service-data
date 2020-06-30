@@ -3,6 +3,7 @@ namespace CarloNicora\Minimalism\Services\Data;
 
 use CarloNicora\Minimalism\Core\Services\Abstracts\AbstractService;
 use CarloNicora\Minimalism\Services\Data\Factories\DataCallersFactory;
+use Exception;
 
 class Data extends AbstractService {
     /** @var DataCallersFactory|null  */
@@ -10,6 +11,7 @@ class Data extends AbstractService {
 
     /**
      * @return DataCallersFactory
+     * @throws Exception
      */
     public function dataCallers() : DataCallersFactory
     {

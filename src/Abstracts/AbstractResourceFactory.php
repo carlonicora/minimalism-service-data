@@ -40,6 +40,7 @@ abstract class AbstractResourceFactory
      * campaignLoader constructor.
      * @param ServicesFactory $services
      * @param EncrypterInterface|null $encrypter
+     * @throws Exception
      */
     public function __construct(servicesFactory $services, ?EncrypterInterface $encrypter=null)
     {

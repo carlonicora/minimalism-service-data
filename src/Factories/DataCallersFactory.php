@@ -18,6 +18,7 @@ class DataCallersFactory
     /**
      * DataCallersFactory constructor.
      * @param ServicesFactory $services
+     * @throws Exception
      */
     public function __construct(ServicesFactory $services)
     {
