@@ -14,7 +14,7 @@ interface DataCallerInterface
      * @param TableInterface $table
      * @param string $functionName
      * @param array $functionParameters
-     * @param CacheFactoryInterface $dataInterface
+     * @param CacheFactoryInterface|null $dataInterface
      */
     public function __construct(
         ServicesFactory $services,

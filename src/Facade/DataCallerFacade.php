@@ -45,7 +45,7 @@ class DataCallerFacade implements DataCallerInterface
      * @param TableInterface $table
      * @param string $functionName
      * @param array $functionParameters
-     * @param CacheFactoryInterface $dataCache
+     * @param CacheFactoryInterface|null $dataCache
      * @throws Exception
      */
     public function __construct(
