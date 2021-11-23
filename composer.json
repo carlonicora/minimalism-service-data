@@ -1,12 +1,12 @@
 {
   "name": "carlonicora/minimalism-service-data",
   "description": "Data service for minimalism",
-  "version": "1.1.0-beta1",
+  "version": "1.0.1-alpha1",
   "homepage": "https://carlonicora.com",
   "time": "2019-05-24",
   "license": "MIT",
   "type": "library",
-  "minimum-stability": "beta",
+  "minimum-stability": "alpha",
   "authors": [
     {
       "name": "Carlo Nicora",
@@ -20,20 +20,11 @@
       "CarloNicora\\Minimalism\\Services\\Data\\":"src/"
     }
   },
-  "autoload-dev": {
-    "psr-4": {
-      "CarloNicora\\Minimalism\\Services\\Data\\Tests\\":"tests/"
-    }
-  },
   "require": {
-    "php": "^7.4",
-    "ext-mysqli": "*",
-    "carlonicora/minimalism": "~11.1",
-    "carlonicora/jsonapi": "~2.0",
-    "carlonicora/minimalism-service-redis": "~2.0",
-    "carlonicora/minimalism-service-cacher": "~1.0",
-    "carlonicora/minimalism-service-mysql": "~3.0",
-    "carlonicora/minimalism-service-resource-builder": "~2.0",
+    "php": "^8.1",
+    "carlonicora/minimalism": "~13.0.1",
+    "carlonicora/minimalism-interface-cache": "~1.0",
+    "carlonicora/minimalism-interface-data": "~1.0",
     "ext-json": "*"
   }
 }
